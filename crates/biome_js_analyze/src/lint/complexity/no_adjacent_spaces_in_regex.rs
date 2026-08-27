@@ -69,18 +69,55 @@ impl Rule for NoAdjacentSpacesInRegex {
         let mut range_list = vec![];
         let mut previous_is_space = false;
         let mut first_consecutive_space_index = 0;
-        for (i, ch) in trimmed_text.bytes().enumerate() {
-            if ch == b' ' {
-                if !previous_is_space {
-                    previous_is_space = true;
-                    first_consecutive_space_index = i;
+        // Track whether the scanner is inside a character class `[...]`.
+        // Inside a class, `{n}` is NOT a quantifier — it is three literal
+        // characters — so replacing consecutive spaces there would corrupt the
+        // regex.  We therefore skip all space tracking inside classes.
+        let mut in_character_class = false;
+        let bytes = trimmed_text.as_bytes();
+        let mut i = 0;
+        while i < bytes.len() {
+            let ch = bytes[i];
+            // Backslash escapes: skip the next byte entirely so that `\[` and
+            // `\]` do not change the character-class nesting level and `\ `
+            // (escaped space) is not counted as a literal space.
+            if ch == b'\\' {
+                if previous_is_space {
+                    if i - first_consecutive_space_index > 1 {
+                        range_list.push(first_consecutive_space_index..i);
+                    }
+                    previous_is_space = false;
                 }
-            } else if previous_is_space {
-                if i - first_consecutive_space_index > 1 {
-                    range_list.push(first_consecutive_space_index..i);
-                }
-                previous_is_space = false;
+                i += 2;
+                continue;
             }
+            if ch == b'[' && !in_character_class {
+                // Entering a character class — close any open space run first.
+                if previous_is_space {
+                    if i - first_consecutive_space_index > 1 {
+                        range_list.push(first_consecutive_space_index..i);
+                    }
+                    previous_is_space = false;
+                }
+                in_character_class = true;
+            } else if ch == b']' && in_character_class {
+                // Exiting a character class — spaces inside were skipped, reset.
+                in_character_class = false;
+                previous_is_space = false;
+            } else if !in_character_class {
+                if ch == b' ' {
+                    if !previous_is_space {
+                        previous_is_space = true;
+                        first_consecutive_space_index = i;
+                    }
+                } else if previous_is_space {
+                    if i - first_consecutive_space_index > 1 {
+                        range_list.push(first_consecutive_space_index..i);
+                    }
+                    previous_is_space = false;
+                }
+            }
+            i += 1;
         }
         if !range_list.is_empty() {
             Some(range_list)

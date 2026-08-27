@@ -26,3 +26,23 @@ expression: valid.jsonc
 ```cjs
 /‎⁦⁩/gu;
 ```
+
+# Input
+```cjs
+/[\s   ]/g;
+```
+
+# Input
+```cjs
+/[a   b]/;
+```
+
+# Input
+```cjs
+/[ \t  ]/;
+```
+
+# Input
+```cjs
+/foo[  ]bar/;
+```
