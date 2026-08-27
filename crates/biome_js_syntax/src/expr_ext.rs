@@ -1027,6 +1027,9 @@ impl AnyJsExpression {
                     },
                     _ => false,
                 },
+                // `test.prop` / `it.prop` from `@fast-check/vitest` /
+                // `@fast-check/jest`: the curried call returns a test body.
+                Some("prop") => third.is_none(),
                 _ => false,
             },
             Some("Deno") => match second {
@@ -1094,6 +1097,9 @@ impl AnyJsExpression {
     /// Checks whether the current function call is a test body context:
     /// - `it` and `test` calls accepted by [`contains_a_test_pattern`], such as
     ///   `it.only` or `test.concurrent`
+    /// - `test.prop` and `it.prop` curried property-based tests from
+    ///   [`@fast-check/vitest`](https://github.com/dubzzz/fast-check/tree/main/packages/vitest)
+    ///   and `@fast-check/jest`
     /// - `it.each` and `test.each` table test calls accepted by
     ///   [`contains_a_test_each_pattern`], such as `test.concurrent.each`
     /// - [`Deno.test`](https://docs.deno.com/runtime/manual/basics/testing/)

@@ -72,4 +72,15 @@ expect.addEqualityTesters([areVolumesEqual]);
 
 expect.addSnapshotSerializer(serializer);
 
+// test.prop / it.prop from @fast-check/vitest and @fast-check/jest (issue #11454)
+import { fc, test as testProp } from "@fast-check/vitest";
+testProp.prop([fc.string()])("round-trips", (s) => {
+	expect(s).toBe(s);
+});
+
+import { fc as fc2, it as itProp } from "@fast-check/jest";
+itProp.prop([fc2.integer()])("is associative", (n) => {
+	expect(n + 0).toBe(n);
+});
+
 ```
