@@ -189,6 +189,15 @@ fn has_valid_anchor_content(node: &AnyJsxElement) -> bool {
                     .is_none_or(|attribute| !attribute.is_falsy())
             })
         || node.has_spread_prop()
+        || node
+            .find_attribute_by_name("aria-label")
+            .is_some_and(|a| a.initializer().is_some())
+        || node
+            .find_attribute_by_name("aria-labelledby")
+            .is_some_and(|a| a.initializer().is_some())
+        || node
+            .find_attribute_by_name("title")
+            .is_some_and(|a| a.initializer().is_some())
 }
 
 /// Returns true when the `<a>` element is the value of a JSX attribute on a custom component.

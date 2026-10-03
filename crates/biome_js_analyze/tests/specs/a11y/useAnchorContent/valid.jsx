@@ -14,4 +14,8 @@
     <Button render={<a href="/home" aria-label="Home" />}>Home</Button>
     <Button render={<a href="/home" aria-label="Home"></a>}>Home</Button>
     <Button render={(<a href="/home" aria-label="Home" />)}>Home</Button>
+    <a aria-label="Navigate to home" />
+    <a aria-label="Navigate to home"></a>
+    <a aria-labelledby="nav-heading" />
+    <a title="Home page" />
 </>
