@@ -24,3 +24,5 @@ a['b'].bar = a['b'].bar;
 a[foobar].b = a[foobar].b;
 a[10].b = a[10].b;
 a[4] = a[4];
+o["x"] = o.x;
+o.x = o["x"];

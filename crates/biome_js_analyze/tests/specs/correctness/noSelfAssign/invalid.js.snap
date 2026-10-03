@@ -30,6 +30,8 @@ a['b'].bar = a['b'].bar;
 a[foobar].b = a[foobar].b;
 a[10].b = a[10].b;
 a[4] = a[4];
+o["x"] = o.x;
+o.x = o["x"];
 
 ```
 
@@ -955,9 +957,55 @@ invalid.js:26:10 lint/correctness/noSelfAssign ━━━━━━━━━━━
     25 │ a[10].b = a[10].b;
   > 26 │ a[4] = a[4];
        │   ^
-    27 │ 
-  
+    27 │ o["x"] = o.x;
+
   i Self assignments have no effect and can be removed.
-  
+
+
+```
+
+```
+invalid.js:27:12 lint/correctness/noSelfAssign ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × x is assigned to itself.
+
+    25 │ a[10].b = a[10].b;
+    26 │ a[4] = a[4];
+  > 27 │ o["x"] = o.x;
+       │            ^
+    28 │ o.x = o["x"];
+
+  i This is where is assigned.
+
+    25 │ a[10].b = a[10].b;
+    26 │ a[4] = a[4];
+  > 27 │ o["x"] = o.x;
+       │   ^^^
+    28 │ o.x = o["x"];
+
+  i Self assignments have no effect and can be removed.
+
+
+```
+
+```
+invalid.js:28:9 lint/correctness/noSelfAssign ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × "x" is assigned to itself.
+
+    26 │ a[4] = a[4];
+    27 │ o["x"] = o.x;
+  > 28 │ o.x = o["x"];
+       │         ^^^
+
+  i This is where is assigned.
+
+    26 │ a[4] = a[4];
+    27 │ o["x"] = o.x;
+  > 28 │ o.x = o["x"];
+       │   ^
+
+  i Self assignments have no effect and can be removed.
+
 
 ```

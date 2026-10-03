@@ -637,6 +637,33 @@ impl TryFrom<(AnyJsAssignmentPattern, AnyJsExpression)> for AnyAssignmentLike {
                     &right,
                 )?,
             },
+
+            // Cross-notation: o.x = o["x"] and o["x"] = o.x
+            (
+                AnyJsAssignmentPattern::AnyJsAssignment(
+                    AnyJsAssignment::JsStaticMemberAssignment(left),
+                ),
+                AnyJsExpression::JsComputedMemberExpression(right),
+            ) => Self::StaticExpression {
+                left: AnyJsAssignmentExpressionLikeIterator::from_static_member_assignment(&left)?,
+                right: AnyJsAssignmentExpressionLikeIterator::from_computed_member_expression(
+                    &right,
+                )?,
+            },
+            (
+                AnyJsAssignmentPattern::AnyJsAssignment(
+                    AnyJsAssignment::JsComputedMemberAssignment(left),
+                ),
+                AnyJsExpression::JsStaticMemberExpression(right),
+            ) => Self::StaticExpression {
+                left: AnyJsAssignmentExpressionLikeIterator::from_computed_member_assignment(
+                    &left,
+                )?,
+                right: AnyJsAssignmentExpressionLikeIterator::from_static_member_expression(
+                    &right,
+                )?,
+            },
+
             _ => Self::None,
         })
     }
@@ -682,6 +709,14 @@ pub enum IdentifiersLike {
     /// a[3].d = a[4].d
     /// ```
     Literal(AnyJsLiteralExpression, AnyJsLiteralExpression),
+    /// Cross-notation: static member name on one side, string literal on the other.
+    ///
+    /// ```js
+    /// o.x = o["x"]
+    /// o["x"] = o.x
+    /// ```
+    NameAndLiteral(JsName, AnyJsLiteralExpression),
+    LiteralAndName(AnyJsLiteralExpression, JsName),
 }
 
 impl TryFrom<(AnyNameLike, AnyNameLike)> for IdentifiersLike {
@@ -708,6 +743,16 @@ impl TryFrom<(AnyNameLike, AnyNameLike)> for IdentifiersLike {
                 AnyNameLike::AnyJsLiteralExpression(right),
             ) => Ok(Self::Literal(left, right)),
 
+            // Cross-notation: static name vs. string literal
+            (
+                AnyNameLike::AnyJsName(AnyJsName::JsName(left)),
+                AnyNameLike::AnyJsLiteralExpression(right),
+            ) => Ok(Self::NameAndLiteral(left, right)),
+            (
+                AnyNameLike::AnyJsLiteralExpression(left),
+                AnyNameLike::AnyJsName(AnyJsName::JsName(right)),
+            ) => Ok(Self::LiteralAndName(left, right)),
+
             _ => Err(()),
         }
     }
@@ -721,6 +766,8 @@ impl IdentifiersLike {
             Self::PrivateName(left, _) => left.range(),
             Self::References(left, _) => left.range(),
             Self::Literal(left, _) => left.range(),
+            Self::NameAndLiteral(left, _) => left.range(),
+            Self::LiteralAndName(left, _) => left.range(),
         }
     }
 
@@ -731,6 +778,8 @@ impl IdentifiersLike {
             Self::PrivateName(_, right) => right.range(),
             Self::References(_, right) => right.range(),
             Self::Literal(_, right) => right.range(),
+            Self::NameAndLiteral(_, right) => right.range(),
+            Self::LiteralAndName(_, right) => right.range(),
         }
     }
 
@@ -741,6 +790,8 @@ impl IdentifiersLike {
             Self::PrivateName(_, right) => right.value_token().ok(),
             Self::References(_, right) => right.value_token().ok(),
             Self::Literal(_, right) => right.value_token().ok(),
+            Self::NameAndLiteral(_, right) => right.value_token().ok(),
+            Self::LiteralAndName(_, right) => right.value_token().ok(),
         }
     }
 }
@@ -789,6 +840,26 @@ fn with_same_identifiers(identifiers_like: &IdentifiersLike) -> Option<()> {
 
             _ => return None,
         },
+        // o.x = o["x"]: compare name text to unquoted string literal
+        IdentifiersLike::NameAndLiteral(left, right) => {
+            if let AnyJsLiteralExpression::JsStringLiteralExpression(right) = right {
+                let left_value = left.value_token().ok()?;
+                let right_value = right.value_token().ok()?;
+                (left_value, right_value)
+            } else {
+                return None;
+            }
+        }
+        // o["x"] = o.x: compare unquoted string literal to name text
+        IdentifiersLike::LiteralAndName(left, right) => {
+            if let AnyJsLiteralExpression::JsStringLiteralExpression(left) = left {
+                let left_value = left.value_token().ok()?;
+                let right_value = right.value_token().ok()?;
+                (left_value, right_value)
+            } else {
+                return None;
+            }
+        }
     };
 
     if inner_string_text(&left_value) == inner_string_text(&right_value) {
